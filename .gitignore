@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+env/
+.env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data & Logs (generated at runtime)
+data/
+logs/
+*.db
+*.db-wal
+*.db-shm
+
+# Generated reports (large HTML files)
+trading_signal_*.html
+tradfi_report_*.html
+
+# OS
+.DS_Store
+Thumbs.db
+
+# License files
+license.dat

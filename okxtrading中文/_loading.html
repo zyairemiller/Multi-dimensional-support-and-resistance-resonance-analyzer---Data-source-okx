@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#e6edf3;display:flex;align-items:center;justify-content:center;height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.loader{width:520px;max-width:92vw}
+h2{font-size:18px;font-weight:600;margin-bottom:4px;color:#e6edf3;text-align:center}
+.sub{font-size:12px;color:#6b7280;margin-bottom:20px;text-align:center}
+#msg{font-size:13px;color:#e6edf3;margin-bottom:8px;text-align:center;min-height:18px}
+.pbar{width:100%;height:6px;background:#1e2738;border-radius:3px;overflow:hidden;margin-bottom:16px}
+.pbar-fill{height:100%;background:linear-gradient(90deg,#58a6ff,#3fb950);border-radius:3px;transition:width .4s ease;width:5%}
+.tasks{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:12px}
+.task{font-size:11px;padding:3px 10px;border-radius:10px;background:#161b22;color:#6b7280;border:1px solid #21262d;transition:all .3s}
+.task.running{color:#58a6ff;border-color:#58a6ff33;background:#1a2332}
+.task.done{color:#3fb950;border-color:#3fb95033;background:#122416}
+.task.error{color:#f85149;border-color:#f8514933;background:#241216}
+.inst-info{font-size:12px;color:#8b949e;text-align:center;margin-bottom:6px}
+.fail-panel{display:none;margin-top:12px;padding:12px 16px;background:#1a1518;border:1px solid #f8514933;border-radius:8px}
+.fail-panel h4{font-size:13px;color:#f85149;margin-bottom:8px}
+.fail-panel .fail-list{font-size:12px;color:#c9d1d9;line-height:1.8}
+.fail-panel .fail-reason{font-size:12px;color:#8b949e;margin-top:4px;border-top:1px solid #21262d;padding-top:6px}
+.retry-hint{display:none;font-size:11px;color:#6b7280;text-align:center;margin-top:10px}
+</style></head>
+<body>
+<div class="loader">
+  <h2>OKX 交易信号分析系统</h2>
+  <div class="sub" id="inst-info">正在初始化...</div>
+  <div class="pbar"><div class="pbar-fill" id="pbar"></div></div>
+  <div id="msg">准备连接API...</div>
+  <div class="tasks" id="tasks"></div>
+  <div class="fail-panel" id="fail-panel">
+    <h4>分析失败</h4>
+    <div class="fail-list" id="fail-list"></div>
+    <div class="fail-reason" id="fail-reason"></div>
+  </div>
+  <div class="retry-hint" id="retry-hint">请检查网络连接后重启程序重试</div>
+</div>
+<script>
+let pct = 5;
+let settled = false;
+function poll(){
+  fetch("/api/progress").then(r=>r.json()).then(d=>{
+    let m = document.getElementById("msg");
+    let inst = document.getElementById("inst-info");
+    let pbar = document.getElementById("pbar");
+    let failPanel = document.getElementById("fail-panel");
+    let failList = document.getElementById("fail-list");
+    let failReason = document.getElementById("fail-reason");
+    let retryHint = document.getElementById("retry-hint");
+
+    if(d.message) m.textContent = d.message;
+    if(d.instrument && d.total>0){
+      inst.textContent = d.instrument + " (" + d.current + "/" + d.total + ")";
+      pct = Math.min(92, Math.round((d.current-1)/d.total*55 + 5));
+    }
+
+    // 任务标签
+    let tasks = d.tasks || {};
+    let container = document.getElementById("tasks");
+    let html = "";
+    for(let k in tasks){
+      let t = tasks[k];
+      let cls = t.status==="running"?"running":t.status==="done"?"done":t.status==="error"?"error":"";
+      html += '<span class="task '+cls+'">'+t.label+'</span>';
+    }
+    container.innerHTML = html;
+
+    let hasRunning = Object.values(tasks).some(t=>t.status==="running");
+    if(!hasRunning && Object.keys(tasks).length>0) pct = Math.max(pct, 40);
+    if(d.stage==="analyzing") pct = Math.max(pct, 68);
+    if(d.stage==="rendering") pct = 88;
+
+    if(d.stage==="done"){
+      settled = true;
+      pct = 100;
+      let isFail = d.error || (d.message && d.message.indexOf("失败")>=0);
+      if(isFail){
+        // 失败状态：红色进度条 + 显示失败面板
+        pbar.style.background = "#f85149";
+        m.style.color = "#f85149";
+        // 显示失败面板
+        if(d.failed_instruments && d.failed_instruments.length>0){
+          failPanel.style.display = "block";
+          failList.innerHTML = "失败品种：" + d.failed_instruments.map(function(x){
+            let labels = {"BTC":"比特币","ETH":"以太坊","XAU":"黄金","XAG":"白银","BTC_SPOT":"比特币现货","ETH_SPOT":"以太坊现货"};
+            return labels[x] || x;
+          }).join("、");
+        }
+        if(d.error){
+          failPanel.style.display = "block";
+          failReason.textContent = d.error;
+        }
+        retryHint.style.display = "block";
+      } else {
+        // 成功状态：绿色进度条
+        pbar.style.background = "#3fb950";
+      }
+    }
+    pbar.style.width = pct + "%";
+  }).catch(function(){});
+}
+setInterval(poll, 500);
+poll();
+</script>
+</body></html>

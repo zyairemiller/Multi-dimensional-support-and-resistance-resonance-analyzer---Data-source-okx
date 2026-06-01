@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TradFi Instrument Selector</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d1117;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+/* ====== Top bar ====== */
+.topbar{background:#161b22;border-bottom:1px solid #21262d;padding:10px 20px;display:flex;align-items:center;gap:16px;flex-shrink:0}
+.topbar h1{font-size:15px;font-weight:600;white-space:nowrap}
+.topbar .desc{font-size:11px;color:#6b7280;margin-left:4px}
+
+.back-btn{
+  display:flex;align-items:center;gap:5px;
+  padding:5px 10px;border-radius:6px;
+  border:1px solid #30363d;background:#21262d;
+  color:#8b949e;cursor:pointer;font-size:12px;
+  transition:.12s;white-space:nowrap;margin-right:8px;
+}
+.back-btn:hover{border-color:#8b949e;color:#c9d1d9}
+.back-btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;flex-shrink:0}
+
+#search{background:#0d1117;border:1px solid #30363d;color:#e6edf3;padding:6px 12px;border-radius:6px;width:200px;font-size:13px;outline:none}
+#search:focus{border-color:#58a6ff}
+#search::placeholder{color:#484f58}
+
+.tabs{display:flex;gap:4px}
+.tab{padding:5px 12px;border-radius:6px;border:1px solid #30363d;background:#21262d;color:#8b949e;cursor:pointer;font-size:12px;transition:.12s}
+.tab:hover{border-color:#58a6ff;color:#c9d1d9}
+.tab.active{background:#1f6feb;border-color:#388bfd;color:#fff}
+.tab .count{font-size:10px;opacity:.6}
+
+.actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+.actions .hint{font-size:11px;color:#6b7280}
+
+/* ====== Main area ====== */
+.main{display:flex;flex:1;overflow:hidden}
+
+/* Instrument list */
+.grid{flex:1;overflow-y:auto;padding:6px}
+.row{display:flex;align-items:center;padding:5px 10px;border-radius:5px;cursor:pointer;gap:8px;transition:background .08s;margin-bottom:1px;user-select:none}
+.row:hover{background:#1c2129}
+.row.selected{background:#0d419d}
+.row input[type=checkbox]{accent-color:#1f6feb;cursor:pointer;flex-shrink:0;width:14px;height:14px}
+.row .base{font-size:13px;font-weight:600;min-width:60px}
+.row .full-id{font-size:11px;color:#6b7280;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .tag{font-size:10px;padding:1px 6px;border-radius:3px;white-space:nowrap}
+.row .tag.swap{background:#122416;color:#3fb950;border:1px solid #1a3a1a}
+.row .tag.spot{background:#121a2a;color:#58a6ff;border:1px solid #1a2a4a}
+.empty{text-align:center;padding:80px 20px;color:#484f58;font-size:14px}
+
+/* Sidebar */
+.sidebar{width:280px;border-left:1px solid #21262d;display:flex;flex-direction:column;flex-shrink:0;background:#0d1117}
+.sidebar-top{padding:16px;border-bottom:1px solid #21262d}
+.sidebar-mid{padding:16px;flex:1}
+.sidebar-bot{padding:16px;border-top:1px solid #21262d}
+
+.stat-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.stat-row .label{font-size:12px;color:#8b949e}
+.stat-row .value{font-size:15px;font-weight:700}
+.stat-row .unit{font-size:11px;color:#6b7280;margin-left:2px}
+
+#start-btn{width:100%;padding:12px;border-radius:8px;border:none;background:#238636;color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:.12s;margin-top:4px}
+#start-btn:disabled{background:#21262d;color:#484f58;cursor:not-allowed}
+#start-btn:not(:disabled):hover{background:#2ea043}
+
+.est-row{display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-top:8px}
+.est-row span:last-child{color:#8b949e}
+
+/* Progress area */
+.progress-box{display:none}
+.progress-box.show{display:block}
+.progress-bar{height:4px;background:#1e2738;border-radius:2px;overflow:hidden;margin:8px 0}
+.progress-fill{height:100%;background:linear-gradient(90deg,#58a6ff,#3fb950);width:0;transition:width .4s ease;border-radius:2px}
+.progress-text{font-size:12px;color:#8b949e;min-height:16px}
+.progress-sub{font-size:10px;color:#6b7280}
+
+/* prompt */
+.prompt{font-size:11px;color:#484f58;padding:8px 0;line-height:1.6}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="location.href='/'" title="Back to main interface">
+    <svg viewBox="0 0 16 16"><path d="M10.5 3L5.5 8l5 5"/></svg>
+    <span>Back</span>
+  </button>
+  <h1>TradFi Instrument Selector</h1>
+  <span class="desc">OKX All Instruments</span>
+  <input id="search" placeholder="Search instruments..." oninput="applyFilters()">
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-filter="all" onclick="setFilter('all',this)">All <span class="count"></span></button>
+    <button class="tab" data-filter="swap" onclick="setFilter('swap',this)">Swap <span class="count"></span></button>
+    <button class="tab" data-filter="spot" onclick="setFilter('spot',this)">Spot <span class="count"></span></button>
+  </div>
+  <div class="actions">
+    <span class="hint" id="visible-count">636 instruments</span>
+  </div>
+</div>
+
+<div class="main">
+  <div class="grid" id="grid">
+    <div class="empty">Loading instrument list...</div>
+  </div>
+
+  <div class="sidebar">
+    <div class="sidebar-top">
+      <div class="stat-row">
+        <span class="label">Selected</span>
+        <span><span class="value" id="sel-num">0</span><span class="unit"> instruments</span></span>
+      </div>
+      <div class="stat-row" style="margin-bottom:2px">
+        <span class="label">Est. Candles</span>
+        <span><span class="value" id="est-candles">0</span><span class="unit"> bars</span></span>
+      </div>
+      <div class="est-row">
+        <span>Est. Time</span>
+        <span id="est-time">—</span>
+      </div>
+      <button id="start-btn" disabled onclick="startAnalysis()">Start Analysis</button>
+    </div>
+
+    <div class="sidebar-mid">
+      <div class="prompt">
+        <div style="margin-bottom:4px">Tips</div>
+        · Search supports instrument code prefix matching<br>
+        · Recommend selecting 3-5 instruments for first test<br>
+        · You can switch instruments and reselect after analysis
+      </div>
+    </div>
+
+    <div class="sidebar-bot">
+      <div class="progress-box" id="progress-box">
+        <div class="progress-text" id="prog-msg"></div>
+        <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+        <div class="progress-sub" id="prog-sub"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CANDLES_PER = 11315;  // 8760(1H) + 2190(4H) + 365(1D)
+let allInstruments = [];
+let selected = new Set();
+let currentFilter = 'all';
+
+// ====== Load instrument list ======
+fetch('/api/tradfi_instruments')
+  .then(r => r.json())
+  .then(data => {
+    allInstruments = data;
+    updateTabCounts();
+    applyFilters();
+  })
+  .catch(() => {
+    document.getElementById('grid').innerHTML = 
+      '<div class="empty">Failed to load instrument list, please check network and refresh</div>';
+  });
+
+function updateTabCounts() {
+  let sw = allInstruments.filter(d => d.instId.endsWith('-SWAP')).length;
+  let sp = allInstruments.length - sw;
+  document.querySelectorAll('.tab').forEach(t => {
+    let f = t.dataset.filter;
+    t.querySelector('.count').textContent = 
+      f === 'all' ? `(${allInstruments.length})` :
+      f === 'swap' ? `(${sw})` : `(${sp})`;
+  });
+}
+
+// ====== Filter & Render ======
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilters();
+}
+
+function applyFilters() {
+  let q = document.getElementById('search').value.toLowerCase();
+  let filtered = allInstruments.filter(d => {
+    if (currentFilter === 'swap' && !d.instId.endsWith('-SWAP')) return false;
+    if (currentFilter === 'spot' && d.instId.endsWith('-SWAP')) return false;
+    if (!q) return true;
+    let base = (d.baseCcy || '').toLowerCase();
+    return base.startsWith(q) || d.instId.toLowerCase().includes(q);
+  });
+
+  document.getElementById('visible-count').textContent = 
+    'Showing ' + filtered.length + ' / ' + allInstruments.length + ' instruments';
+
+  let html = '';
+  if (filtered.length === 0) {
+    html = '<div class="empty">No matching instruments</div>';
+  } else {
+    filtered.forEach(d => {
+      let isSwap = d.instId.endsWith('-SWAP');
+      let base = d.baseCcy || d.instId.split('-')[0];
+      let sel = selected.has(d.instId);
+      html += '<div class="row' + (sel ? ' selected' : '') + '" onclick="toggle(\'' + d.instId + '\',this)">';
+      html += '<input type="checkbox" ' + (sel ? 'checked' : '') + ' tabindex="-1">';
+      html += '<span class="base">' + base + '</span>';
+      html += '<span class="full-id">' + d.instId + '</span>';
+      html += '<span class="tag ' + (isSwap ? 'swap' : 'spot') + '">' + (isSwap ? 'Swap' : 'Spot') + '</span>';
+      html += '</div>';
+    });
+  }
+  document.getElementById('grid').innerHTML = html;
+}
+
+// ====== Selection ======
+function toggle(instId, el) {
+  if (selected.has(instId)) {
+    selected.delete(instId);
+    if (el) { el.classList.remove('selected'); el.querySelector('input').checked = false; }
+  } else {
+    selected.add(instId);
+    if (el) { el.classList.add('selected'); el.querySelector('input').checked = true; }
+  }
+  updateStats();
+}
+
+function updateStats() {
+  let n = selected.size;
+  document.getElementById('sel-num').textContent = n;
+  let candles = n * CANDLES_PER;
+  document.getElementById('est-candles').textContent = candles.toLocaleString();
+  
+  // Estimated time: ~40 API calls per instrument, rate limited at 10/s + computation time
+  let estSec = n * 6;  // ~6 sec/instrument (API + compute + render)
+  if (n === 0) {
+    document.getElementById('est-time').textContent = '—';
+  } else if (estSec < 60) {
+    document.getElementById('est-time').textContent = '~' + Math.ceil(estSec) + ' sec';
+  } else {
+    document.getElementById('est-time').textContent = '~' + (estSec/60).toFixed(1) + ' min';
+  }
+  
+  document.getElementById('start-btn').disabled = n === 0;
+}
+
+// ====== Start Analysis ======
+function startAnalysis() {
+  if (selected.size === 0) return;
+  
+  // Disable UI
+  document.getElementById('start-btn').disabled = true;
+  document.getElementById('start-btn').textContent = 'Analyzing...';
+  document.getElementById('progress-box').classList.add('show');
+  document.getElementById('prog-fill').style.background = '';
+  document.getElementById('prog-fill').style.width = '0%';
+  document.getElementById('prog-msg').textContent = 'Preparing...';
+  document.getElementById('prog-sub').textContent = '';
+  
+  let instIds = Array.from(selected);
+  let startTs = Date.now();
+  let timeoutSec = Math.max(90, instIds.length * 45);
+  
+  fetch('/api/tradfi_start', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({inst_ids: instIds})
+  }).then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(d => {
+    // Poll progress
+    let timer = setInterval(() => {
+      let elapsed = (Date.now() - startTs) / 1000;
+      if (elapsed > timeoutSec) {
+        clearInterval(timer);
+        document.getElementById('prog-msg').textContent = 'Analysis timeout (' + timeoutSec + 's), please retry';
+        document.getElementById('prog-sub').textContent = 'Server may be overloaded';
+        document.getElementById('start-btn').disabled = false;
+        document.getElementById('start-btn').textContent = 'Retry';
+        return;
+      }
+      
+      fetch('/api/tradfi_progress').then(r => r.json()).then(p => {
+        document.getElementById('prog-fill').style.width = p.pct + '%';
+        document.getElementById('prog-msg').textContent = p.msg || '';
+        let total = instIds.length;
+        let done = Math.round(p.pct * total / 100);
+        document.getElementById('prog-sub').textContent = 
+          p.pct > 0 ? done + '/' + total + ' instruments' : '';
+        
+        if (p.done) {
+          clearInterval(timer);
+          document.getElementById('prog-fill').style.background = '#3fb950';
+          if (p.report_url) {
+            document.getElementById('prog-sub').textContent = 'Analysis complete, redirecting to report...';
+            setTimeout(() => { window.location.href = p.report_url; }, 800);
+          } else {
+            document.getElementById('prog-msg').textContent = 'Analysis failed: no report generated';
+            document.getElementById('prog-sub').textContent = 'Please check network and retry';
+            document.getElementById('start-btn').disabled = false;
+            document.getElementById('start-btn').textContent = 'Retry';
+          }
+        }
+      }).catch(() => {});
+    }, 500);
+  }).catch(e => {
+    document.getElementById('prog-msg').textContent = 'Start failed: ' + e.message;
+    document.getElementById('prog-sub').textContent = 'Please check if service is running';
+    document.getElementById('start-btn').disabled = false;
+    document.getElementById('start-btn').textContent = 'Retry';
+  });
+}
+</script>
+</body>
+</html>

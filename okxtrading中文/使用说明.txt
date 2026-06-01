@@ -1,0 +1,16 @@
+﻿OKX 交易信号分析系统 - 使用说明
+================================
+
+1. 安装依赖（首次使用）：
+   pip install pandas numpy PySocks pywebview
+
+2. 运行程序：
+   python trading_signal.py
+
+3. 可选参数：
+   --instruments BTC ETH XAU     （指定品种，默认全部6个）
+   --refresh                     （强制从API刷新，忽略本地缓存）
+
+4. 首次运行会自动创建本地缓存数据库，后续运行速度更快
+
+5. 程序启动后会弹出桌面窗口，无需浏览器
