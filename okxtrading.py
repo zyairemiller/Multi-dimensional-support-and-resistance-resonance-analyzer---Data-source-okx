@@ -1774,7 +1774,7 @@ poll();
                     print(f"  {inst}: Analysis returned empty result")
             except Exception as e:
                 failed_instruments.append(inst)
-                        logger.error(f"Error analyzing {inst}: {e}", exc_info=True)
+                logger.error(f"Error analyzing {inst}: {e}", exc_info=True)
 
         if failed_instruments:
             print(f"\nFailed instruments: {', '.join(failed_instruments)}")
